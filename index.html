@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Blackjack Card Counting Trainer (Hi-Lo)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Card Counting Trainer</title>
+
+  <!-- PWA hooks (keep if you're hosting / packaging) -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0b1220">
+
   <style>
     :root{
       --bg:#0b1220; --panel:#111b2e; --text:#e7eefc; --muted:#a9b6d3;
@@ -15,32 +18,43 @@
       --radius: 16px;
     }
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{
-      margin:0; min-height:100vh; color:var(--text);
+      margin:0; color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:radial-gradient(1200px 700px at 20% 0%, #1a2b57 0%, var(--bg) 55%, #070b14 100%);
+      overflow:hidden; /* ✅ no scrolling */
+      -webkit-tap-highlight-color: transparent;
     }
+
+    /* ===== Top bar ===== */
     header{
-      position:sticky; top:0; z-index:50;
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-      padding:14px 16px;
+      position:relative;
+      height:64px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px;
       border-bottom:1px solid var(--border);
       background:rgba(10,16,32,.62);
       backdrop-filter: blur(10px);
     }
-    .brand{display:flex; align-items:center; gap:10px}
+    .brand{display:flex; align-items:center; gap:10px; min-width:190px}
     .logo{
       width:38px; height:38px; border-radius:12px;
       background:linear-gradient(135deg, rgba(76,201,240,.95), rgba(73,209,124,.9));
       box-shadow: var(--shadow);
+      flex:0 0 auto;
     }
-    .title{line-height:1.15}
-    .title b{display:block; font-size:15px; letter-spacing:.2px}
-    .title span{display:block; font-size:12px; color:var(--muted)}
-    .topPills{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
+    .title{line-height:1.1}
+    .title b{display:block; font-size:14px; letter-spacing:.2px}
+    .title span{display:block; font-size:11px; color:var(--muted)}
+    .topRight{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
     .pill{
-      padding:8px 10px; border:1px solid var(--border); border-radius:999px;
-      background:rgba(255,255,255,.04); font-size:13px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      font-size:13px;
+      white-space:nowrap;
     }
     .pill b{color:var(--accent)}
     .btn{
@@ -49,7 +63,7 @@
       background:rgba(255,255,255,.05);
       color:var(--text);
       padding:9px 12px; border-radius:14px;
-      font-weight:800; font-size:13px;
+      font-weight:900; font-size:13px;
       transition:.14s transform,.14s background,.14s border;
     }
     .btn:hover{transform:translateY(-1px); background:rgba(255,255,255,.07)}
@@ -60,42 +74,90 @@
     .btn.warn{background: rgba(255,209,102,.14); border-color: rgba(255,209,102,.35)}
     .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
 
-    main{
-      max-width:1180px; margin:0 auto; padding:16px;
-      display:grid; grid-template-columns: 330px 1fr; gap:14px;
+    /* ===== App layout (no scroll) ===== */
+    .app{
+      height: calc(100vh - 64px);
+      display:grid;
+      place-items:center;
+      padding:12px;
     }
-    @media (max-width: 1020px){ main{grid-template-columns:1fr} }
+    .frame{
+      width:min(1040px, 100%);
+      height:100%;
+      display:grid;
+      grid-template-rows: auto 1fr auto;
+      gap:12px;
+    }
 
-    .panel{
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      box-shadow: var(--shadow);
-      overflow:hidden;
+    /* ===== Welcome screen ===== */
+    .welcome{
+      height:100%;
+      display:grid;
+      place-items:center;
     }
-    .side{padding:14px}
-    .content{padding:14px}
-    h3{margin:0 0 10px 0; font-size:14px; color:var(--muted); letter-spacing:.25px}
+    .welcomeCard{
+      width:min(820px, 100%);
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .welcomeTop{
+      display:flex; align-items:center; gap:12px;
+      margin-bottom:10px;
+    }
+    .welcomeTop h1{
+      margin:0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+    .sub{color:var(--muted); font-size:13px; margin-top:4px; line-height:1.4}
+    .split{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width: 860px){ .split{grid-template-columns:1fr} }
     .box{
       border:1px solid rgba(255,255,255,.10);
       border-radius: 16px;
       background:rgba(0,0,0,.16);
       padding:12px;
     }
-    .stack{display:grid; gap:10px}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .small{font-size:12px; color:var(--muted)}
-    .badge{
-      padding:6px 8px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      color:var(--muted);
-      font-size:12px;
-      font-weight:700;
+    .box h3{margin:0 0 8px 0; font-size:13px; color:var(--muted); letter-spacing:.2px}
+    .list{margin:0; padding-left:18px; color:var(--muted); font-size:13px}
+    .list li{margin:6px 0}
+    .welcomeActions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+
+    /* ===== Main table screen ===== */
+    .table{
+      height:100%;
+      display:grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap:12px;
     }
+
+    .tableTopRow{
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    }
+    .msg{
+      font-size:18px;
+      font-weight:1000;
+      letter-spacing:.2px;
+      margin:0;
+    }
+    .muted{color:var(--muted); font-size:12px}
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 860px){ .controls{grid-template-columns:1fr} }
     label{font-size:12px; color:var(--muted)}
-    select, input[type="number"], input[type="text"]{
+    select, input[type="number"]{
       width:100%;
       padding:10px 12px;
       border-radius:14px;
@@ -105,18 +167,47 @@
       outline:none;
     }
     select:focus, input:focus{border-color: rgba(76,201,240,.5)}
-    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
-    .grid3{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px}
-    @media (max-width: 720px){
-      .grid2,.grid3{grid-template-columns:1fr}
+
+    .actions{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
     }
 
-    .tableGrid{
-      display:grid; grid-template-columns: 1.1fr .9fr; gap:12px;
+    .hands{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      height:100%;
+      min-height:0;
     }
-    @media (max-width: 980px){ .tableGrid{grid-template-columns:1fr} }
+    @media (max-width: 860px){ .hands{grid-template-columns:1fr} }
 
-    .cards{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    .handBox{
+      height:100%;
+      display:grid;
+      grid-template-rows: auto 1fr;
+      min-height:0;
+    }
+    .handHeader{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:10px;
+    }
+    .badge{
+      padding:6px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .cards{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-content:flex-start;
+      overflow:hidden; /* keep flat */
+    }
     .card{
       width:72px; height:98px;
       border-radius:14px;
@@ -138,67 +229,14 @@
       background:linear-gradient(180deg, rgba(76,201,240,.12), rgba(0,0,0,.16)) !important;
     }
 
-    .bigMsg{
-      font-size:22px; font-weight:1000; letter-spacing:.2px; margin-top:8px;
+    .footerRow{
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
     }
     .status.good{color:var(--good)}
     .status.bad{color:var(--bad)}
     .status.warn{color:var(--warn)}
 
-    .log{
-      max-height:240px; overflow:auto; padding-right:4px;
-    }
-    .entry{
-      padding:8px 10px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      margin-bottom:8px;
-      font-size:13px;
-    }
-    .entry .meta{font-size:11px; color:var(--muted); margin-top:4px}
-
-    .kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      padding:2px 6px; border-radius:9px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.24);
-      color:var(--muted);
-      font-size:12px;
-    }
-
-    .meter{
-      height:10px; border-radius:999px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08);
-      overflow:hidden;
-    }
-    .meter > div{
-      height:100%;
-      width:0%;
-      background:linear-gradient(90deg, rgba(255,93,93,.8), rgba(255,209,102,.9), rgba(73,209,124,.9));
-    }
-
-    .hintGrid{
-      display:grid; grid-template-columns: 1fr 1fr; gap:10px;
-      margin-top:10px;
-    }
-    @media (max-width: 720px){ .hintGrid{grid-template-columns:1fr} }
-
-    .toggleRow{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px;
-    }
-    .toggle{
-      display:flex; gap:8px; align-items:center;
-      padding:8px 10px;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:14px;
-      background:rgba(0,0,0,.14);
-      cursor:pointer; user-select:none;
-    }
-    .toggle input{accent-color: var(--accent)}
-
-    /* ======= Modal ======= */
+    /* ===== Modal ===== */
     .modalBackdrop{
       position:fixed; inset:0;
       background:rgba(0,0,0,.55);
@@ -243,6 +281,7 @@
       background:rgba(76,201,240,.08);
       color:var(--muted);
       font-size:13px;
+      line-height:1.45;
     }
     .mono{
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -255,57 +294,258 @@
     }
   </style>
 </head>
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js");
-  }
-</script>
+
 <body>
 <header>
   <div class="brand">
     <div class="logo"></div>
     <div class="title">
       <b>Card Counting Trainer</b>
-      <span>Hi-Lo • shoe + penetration • discard tray • graded practice</span>
+      <span>Blackjack + Hi-Lo (RC / TC)</span>
     </div>
   </div>
-  <div class="topPills">
+
+  <div class="topRight">
     <button class="btn primary" id="btnHow">How to Count</button>
-    <div class="pill">Trainer Bank: <b id="bank">$1000</b></div>
+    <button class="btn" id="btnSettings">Settings</button>
+
+    <div class="pill">Bank: <b id="bank">$1000</b></div>
     <div class="pill">Running: <b id="rcTop">0</b></div>
     <div class="pill">True: <b id="tcTop">0.0</b></div>
-    <button class="btn" id="btnSave">Save</button>
-    <button class="btn" id="btnReset">Reset</button>
   </div>
 </header>
 
-<main>
-  <section class="panel side">
-    <h3>Trainer Settings</h3>
-    <div class="stack">
-      <div class="box">
-        <div class="grid2">
+<div class="app">
+  <div class="frame">
+    <!-- WELCOME -->
+    <section id="screenWelcome" class="welcome">
+      <div class="welcomeCard">
+        <div class="welcomeTop">
+          <div class="logo"></div>
           <div>
-            <label>Mode</label>
-            <select id="mode">
-              <option value="beginner">Beginner (count shown)</option>
-              <option value="intermediate">Intermediate (running hidden, true optional)</option>
-              <option value="advanced">Advanced (no count UI, graded)</option>
-            </select>
-          </div>
-          <div>
-            <label>Decks in shoe</label>
-            <select id="decks">
-              <option>1</option>
-              <option>2</option>
-              <option>4</option>
-              <option selected>6</option>
-              <option>8</option>
-            </select>
+            <h1>Welcome to CountTrainer</h1>
+            <div class="sub">
+              Practice Hi-Lo card counting offline. Start in Beginner (counts shown), then hide them and self-test with Count Checks.
+            </div>
           </div>
         </div>
 
-        <div class="grid2" style="margin-top:10px">
+        <div class="split">
+          <div class="box">
+            <h3>What you’ll practice</h3>
+            <ul class="list">
+              <li><b>Running Count (RC)</b> using Hi-Lo (+1 / 0 / −1)</li>
+              <li><b>Decks remaining</b> intuition</li>
+              <li><b>True Count (TC)</b> = RC ÷ decks remaining</li>
+              <li><b>Bet sizing</b> based on TC (optional)</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>Quick controls</h3>
+            <ul class="list">
+              <li>Use <b>Deal / Hit / Stand / Double</b></li>
+              <li>Use <b>Count Check</b> to grade your RC/TC</li>
+              <li>Keep it “flat”: this app is designed to <b>not scroll</b></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="welcomeActions">
+          <button class="btn primary" id="btnStart">Start Training</button>
+          <button class="btn" id="btnReset">Reset Bank/Stats</button>
+          <span class="muted">Tip: turn on Airplane Mode — it still works.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLE (FLAT SCREEN) -->
+    <section id="screenTable" class="table" style="display:none;">
+      <div class="box">
+        <div class="tableTopRow">
+          <div>
+            <p class="msg" id="msg">Press Deal to start a shoe.</p>
+            <div class="muted" id="subMsg">Dealer stands on 17 • no splits • double on first decision</div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="btnDeal">Deal</button>
+            <button class="btn" id="btnHit" disabled>Hit</button>
+            <button class="btn" id="btnStand" disabled>Stand</button>
+            <button class="btn warn" id="btnDouble" disabled>Double</button>
+            <button class="btn good" id="btnCountCheck">Count Check</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- minimalist controls row -->
+      <div class="controls">
+        <div class="box">
+          <label>Count check frequency</label>
+          <select id="checkFreq">
+            <option value="everyHand" selected>Every hand</option>
+            <option value="random">Random (about 1/3 hands)</option>
+            <option value="manual">Manual only</option>
+          </select>
+          <div class="muted" style="margin-top:6px">Prompts you to enter your count.</div>
+        </div>
+
+        <div class="box">
+          <label>Base unit amount ($)</label>
+          <input id="unit" type="number" min="1" step="1" value="50" />
+          <div class="muted" style="margin-top:6px">Used for bet sizing & grading.</div>
+        </div>
+
+        <div class="box">
+          <label>Bet units</label>
+          <select id="betUnits">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="6">6</option><option value="8">8</option>
+            <option value="10">10</option><option value="12">12</option>
+          </select>
+          <div class="muted" style="margin-top:6px">Trainer can grade this (Settings).</div>
+        </div>
+      </div>
+
+      <!-- hands -->
+      <div class="hands">
+        <div class="box handBox">
+          <div class="handHeader">
+            <b>Dealer</b>
+            <span class="badge">Total: <b id="dTotal">—</b></span>
+          </div>
+          <div class="cards" id="dealerCards"></div>
+        </div>
+
+        <div class="box handBox">
+          <div class="handHeader">
+            <b>You</b>
+            <span class="badge">Total: <b id="pTotal">—</b></span>
+          </div>
+          <div class="cards" id="playerCards"></div>
+        </div>
+      </div>
+
+      <!-- bottom row -->
+      <div class="box">
+        <div class="footerRow">
+          <div class="badge">Hand Bet: <b id="handBetLabel">$0</b></div>
+          <div class="badge">Suggested Bet: <b id="suggestBet">—</b></div>
+          <div class="badge">Shoe: <b id="shoeInfo">—</b></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- HOW TO COUNT modal -->
+<div class="modalBackdrop" id="helpBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="How to count cards">
+    <div class="modalHeader">
+      <div>
+        <h2>How to Count Cards (Hi-Lo) — Full Process</h2>
+        <p>Close with <span class="mono">Esc</span> or tap outside.</p>
+      </div>
+      <button class="btn" id="btnCloseHelp">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="callout">
+        <b>Goal:</b> Keep a <b>Running Count</b> of what’s dealt. Convert to a <b>True Count</b> using decks remaining.
+        Bet more when TC is high.
+      </div>
+
+      <div class="step">
+        <h4>1) Memorize values</h4>
+        <ul>
+          <li><b>2–6</b> → <span class="mono">+1</span></li>
+          <li><b>7–9</b> → <span class="mono">0</span></li>
+          <li><b>10–A</b> → <span class="mono">−1</span></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <h4>2) Running Count (RC)</h4>
+        <ul>
+          <li>Start RC at <span class="mono">0</span> after a shuffle.</li>
+          <li>Update RC for every <b>exposed</b> card: your cards, dealer upcard, hits, and dealer hole card when revealed.</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <h4>3) True Count (TC)</h4>
+        <div class="callout"><b>TC</b> = <span class="mono">RC ÷ Decks Remaining</span></div>
+        <ul>
+          <li>RC +8 with 4 decks left → TC ≈ +2</li>
+          <li>RC +8 with 2 decks left → TC ≈ +4 (stronger)</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <h4>4) Bet ramp (simple trainer version)</h4>
+        <ul>
+          <li>TC ≤ 0 → 1u</li>
+          <li>TC ~ 1 → 2u</li>
+          <li>TC ~ 2 → 4u</li>
+          <li>TC ~ 3 → 8u</li>
+          <li>TC ≥ 4 → 12u</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <h4>Practice routine</h4>
+        <ul>
+          <li>Start with counts shown (Settings), then hide them.</li>
+          <li>Use <b>Count Check</b> to enter your RC/TC and get graded.</li>
+          <li>Repeat until you can keep RC without thinking.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS modal -->
+<div class="modalBackdrop" id="settingsBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="modalHeader">
+      <div>
+        <h2>Settings</h2>
+        <p>These don’t clutter the main table screen.</p>
+      </div>
+      <button class="btn" id="btnCloseSettings">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="step">
+        <h4>Trainer display</h4>
+        <div class="callout">
+          Turn these off to simulate real play. You can still use Count Check to test yourself.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <label class="box" style="display:flex;gap:10px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="showRC" checked style="transform:scale(1.2)"/>
+            <div>
+              <b>Show Running Count</b>
+              <div class="muted">Shows RC in the top bar.</div>
+            </div>
+          </label>
+          <label class="box" style="display:flex;gap:10px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="showTC" checked style="transform:scale(1.2)"/>
+            <div>
+              <b>Show True Count</b>
+              <div class="muted">Shows TC in the top bar.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="step">
+        <h4>Shoe behavior</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div>
+            <label>Decks in shoe</label>
+            <select id="decks">
+              <option>1</option><option>2</option><option>4</option><option selected>6</option><option>8</option>
+            </select>
+          </div>
           <div>
             <label>Penetration (reshuffle point)</label>
             <select id="pen">
@@ -318,6 +558,9 @@
               <option value="0.85">85%</option>
             </select>
           </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
           <div>
             <label>Deal speed (ms)</label>
             <select id="speed">
@@ -327,302 +570,63 @@
               <option value="700">Slow</option>
             </select>
           </div>
+          <label class="box" style="display:flex;gap:10px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="autoHints" checked style="transform:scale(1.2)"/>
+            <div>
+              <b>Show Suggested Bet</b>
+              <div class="muted">Displays trainer ramp suggestion.</div>
+            </div>
+          </label>
         </div>
 
-        <div class="toggleRow">
-          <label class="toggle"><input type="checkbox" id="showRC" checked /> Show running count</label>
-          <label class="toggle"><input type="checkbox" id="showTC" checked /> Show true count</label>
-          <label class="toggle"><input type="checkbox" id="autoHints" checked /> Show bet suggestion</label>
-        </div>
-
-        <div class="small" style="margin-top:10px">
-          Hi-Lo values: 2–6 = +1 • 7–9 = 0 • 10–A = −1
-        </div>
-      </div>
-
-      <div class="box">
-        <div class="row" style="justify-content:space-between">
-          <div>
-            <div style="font-weight:900">Shoe / Discard</div>
-            <div class="small">Reshuffles when penetration reached</div>
-          </div>
-          <span class="badge" id="shoeInfo">—</span>
-        </div>
-        <div class="meter" style="margin-top:10px"><div id="penBar"></div></div>
-        <div class="hintGrid">
-          <div class="badge">Cards Dealt: <b id="dealt">0</b></div>
-          <div class="badge">Decks Left: <b id="decksLeft">6.0</b></div>
-        </div>
-        <div class="row" style="margin-top:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
           <button class="btn warn" id="btnShuffle">Shuffle Now</button>
-          <button class="btn" id="btnClearStats">Clear Stats</button>
+          <button class="btn bad" id="btnWipe">Reset Bank/Stats</button>
+          <span class="muted">Saves automatically.</span>
         </div>
       </div>
 
-      <div class="box">
-        <div class="row" style="justify-content:space-between">
-          <div>
-            <div style="font-weight:900">Performance</div>
-            <div class="small">Tracks accuracy + bet decisions</div>
-          </div>
-          <span class="badge" id="perfBadge">—</span>
-        </div>
-        <div class="hintGrid">
-          <div class="badge">Count Checks: <b id="checks">0</b></div>
-          <div class="badge">Count Errors: <b id="errors">0</b></div>
-          <div class="badge">Bet Checks: <b id="betChecks">0</b></div>
-          <div class="badge">Bet Errors: <b id="betErrors">0</b></div>
-        </div>
-      </div>
-
-      <div class="box">
-        <div style="font-weight:900">Hotkeys</div>
-        <div class="small" style="margin-top:6px">
-          <span class="kbd">D</span> Deal •
-          <span class="kbd">H</span> Hit •
-          <span class="kbd">S</span> Stand •
-          <span class="kbd">F</span> Fold •
-          <span class="kbd">C</span> Count Check •
-          <span class="kbd">B</span> Bet Check •
-          <span class="kbd">Esc</span> Close Help
+      <div class="step">
+        <h4>Count Check</h4>
+        <div class="callout">
+          Press <b>Count Check</b> on the table screen to enter your RC/TC and get graded.
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <section class="panel content">
-    <div class="tableGrid">
-      <div class="stack">
-        <div class="box">
-          <div class="row" style="justify-content:space-between">
-            <div>
-              <div style="font-weight:1000">Blackjack Table</div>
-              <div class="small">Dealer stands on 17 • no splits • double on first decision</div>
-            </div>
-            <div class="row">
-              <span class="badge">Bet Unit: <b id="unitLabel">$50</b></span>
-              <span class="badge">Hand Bet: <b id="handBetLabel">$0</b></span>
-            </div>
-          </div>
-
-          <div class="grid3" style="margin-top:10px">
-            <div>
-              <label>Base Unit ($)</label>
-              <input id="unit" type="number" min="1" step="1" value="50" />
-              <div class="small" style="margin-top:6px">Used for bet ramp & sizing.</div>
-            </div>
-            <div>
-              <label>Your bet (units)</label>
-              <select id="betUnits">
-                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-                <option value="4">4</option><option value="6">6</option><option value="8">8</option>
-                <option value="10">10</option><option value="12">12</option>
-              </select>
-              <div class="small" style="margin-top:6px">Trainer grades this vs true count.</div>
-            </div>
-            <div>
-              <label>Count check frequency</label>
-              <select id="checkFreq">
-                <option value="everyHand" selected>Every hand</option>
-                <option value="random">Random (about 1/3 hands)</option>
-                <option value="manual">Manual only</option>
-              </select>
-              <div class="small" style="margin-top:6px">Prompts you to enter your count.</div>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:12px">
-            <button class="btn primary" id="btnDeal">Deal</button>
-            <button class="btn" id="btnHit" disabled>Hit</button>
-            <button class="btn" id="btnStand" disabled>Stand</button>
-            <button class="btn warn" id="btnDouble" disabled>Double</button>
-            <button class="btn bad" id="btnFold" disabled>Fold</button>
-            <button class="btn good" id="btnCountCheck">Count Check</button>
-            <button class="btn good" id="btnBetCheck">Bet Check</button>
-          </div>
-
-          <div class="row" style="justify-content:space-between; margin-top:10px">
-            <div class="badge">Suggested Bet: <b id="suggestBet">—</b></div>
-            <div class="badge">To Call: <b id="toCall">—</b></div>
-          </div>
-
-          <div class="bigMsg" id="msg">Press Deal to start a shoe.</div>
-        </div>
-
-        <div class="box">
-          <div class="row" style="justify-content:space-between">
-            <div style="font-weight:1000">Dealer</div>
-            <div class="badge">Total: <b id="dTotal">—</b></div>
-          </div>
-          <div class="cards" id="dealerCards" style="margin-top:10px"></div>
-        </div>
-
-        <div class="box">
-          <div class="row" style="justify-content:space-between">
-            <div style="font-weight:1000">You</div>
-            <div class="badge">Total: <b id="pTotal">—</b></div>
-          </div>
-          <div class="cards" id="playerCards" style="margin-top:10px"></div>
-        </div>
-
-        <div class="box">
-          <div style="font-weight:1000">Count Check</div>
-          <div class="small">Enter the running count you believe it is right now (and optionally true count).</div>
-          <div class="grid2" style="margin-top:10px">
-            <div>
-              <label>Your Running Count</label>
-              <input id="inpRC" type="number" step="1" value="0" />
-            </div>
-            <div>
-              <label>Your True Count (optional)</label>
-              <input id="inpTC" type="number" step="0.1" value="0" />
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button class="btn good" id="btnSubmitCount">Submit Count</button>
-            <span class="small" id="countFeedback"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stack">
-        <div class="box">
-          <div class="row" style="justify-content:space-between">
-            <div style="font-weight:1000">Trainer Log</div>
-            <span class="badge" id="lastResult">—</span>
-          </div>
-          <div class="log" id="log" style="margin-top:10px"></div>
-          <div class="small" style="margin-top:10px">
-            Training / entertainment only (no real money).
-          </div>
-        </div>
-
-        <div class="box">
-          <div style="font-weight:1000">How this grades you</div>
-          <div class="small" style="margin-top:8px">
-            • <b>Count Checks</b>: compares your entered RC/TC to the shoe’s actual values.<br/>
-            • <b>Bet Checks</b>: compares your chosen bet to a simple “bet ramp” suggestion based on true count.
-          </div>
-          <div class="small" style="margin-top:10px">
-            Default ramp:<br/>
-            TC ≤ 0 → 1u • TC 1 → 2u • TC 2 → 4u • TC 3 → 8u • TC ≥ 4 → 12u
-          </div>
-        </div>
-
-        <div class="box">
-          <div style="font-weight:1000">UI hints</div>
-          <div class="small" style="margin-top:8px">
-            Beginner shows counts. Intermediate hides RC by default. Advanced hides both (you should self-check).
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<!-- ===== Help / How-To Modal ===== -->
-<div class="modalBackdrop" id="helpBackdrop" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="How to count cards">
+<!-- COUNT CHECK modal -->
+<div class="modalBackdrop" id="countBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Count check">
     <div class="modalHeader">
       <div>
-        <h2>How to Count Cards (Hi-Lo) — The Full Process</h2>
-        <p>Read this once, then practice with the trainer. Close with <span class="mono">Esc</span>.</p>
+        <h2>Count Check</h2>
+        <p>Enter what you think the counts are right now.</p>
       </div>
-      <div class="row">
-        <button class="btn" id="btnCloseHelp">Close</button>
-      </div>
+      <button class="btn" id="btnCloseCount">Close</button>
     </div>
 
     <div class="modalBody">
-      <div class="callout">
-        <b>Goal:</b> Keep a <b>Running Count</b> of what’s been dealt. Convert to a <b>True Count</b> using <b>decks remaining</b>. Bet more when the true count is high.
-      </div>
-
       <div class="step">
-        <h4>1) Memorize the Hi-Lo Values (this is everything)</h4>
-        <div class="small">You update your count for every card that is revealed (player, dealer upcard, dealer hole when shown, and dealer hits).</div>
-        <ul>
-          <li><b>2–6</b> → <span class="mono">+1</span> (low cards help the dealer bust less; seeing them go out is good for you)</li>
-          <li><b>7–9</b> → <span class="mono">0</span></li>
-          <li><b>10, J, Q, K, A</b> → <span class="mono">−1</span> (high cards help you: blackjacks, doubles, dealer busts)</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>2) Keep the Running Count (RC)</h4>
-        <div class="small">Start at <span class="mono">0</span> after a shuffle. Add the Hi-Lo value as cards appear.</div>
-        <ul>
-          <li>Example: cards shown = 5 (+1), K (−1), 3 (+1), 9 (0) → RC = <span class="mono">+1</span></li>
-          <li><b>Only count exposed cards</b>. If you can’t see it yet, you can’t count it (until revealed).</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>3) Estimate Decks Remaining</h4>
-        <div class="small">Casinos use a shoe (often 6–8 decks). You estimate how much is left.</div>
-        <ul>
-          <li>Rule of thumb: 52 cards ≈ 1 deck. Half a deck ≈ 26 cards.</li>
-          <li>This trainer shows <b>Decks Left</b> so you can learn what those estimates feel like.</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>4) Convert to True Count (TC)</h4>
-        <div class="small">True count normalizes the running count by how many decks remain.</div>
-        <div class="callout">
-          <b>True Count</b> = <span class="mono">Running Count ÷ Decks Remaining</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label>Your Running Count</label>
+            <input id="inpRC" type="number" step="1" value="0" />
+          </div>
+          <div>
+            <label>Your True Count (optional)</label>
+            <input id="inpTC" type="number" step="0.1" value="" placeholder="leave blank if unsure"/>
+          </div>
         </div>
-        <ul>
-          <li>Example: RC = +8 with ~4 decks left → TC ≈ +2</li>
-          <li>Example: RC = +8 with ~2 decks left → TC ≈ +4 (much stronger!)</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>5) Bet More When TC Is High (Bet Ramp)</h4>
-        <div class="small">Counting is only valuable if you scale your bets. This trainer grades you using a simple ramp.</div>
-        <ul>
-          <li>TC ≤ 0 → 1 unit</li>
-          <li>TC ~ 1 → 2 units</li>
-          <li>TC ~ 2 → 4 units</li>
-          <li>TC ~ 3 → 8 units</li>
-          <li>TC ≥ 4 → 12 units</li>
-        </ul>
-        <div class="small">In real play, the exact ramp depends on rules, bankroll, risk tolerance, and heat. Here, it’s for training muscle memory.</div>
-      </div>
-
-      <div class="step">
-        <h4>6) When to Update Your Count</h4>
-        <ul>
-          <li>Immediately after the initial deal: your 2 cards + dealer upcard.</li>
-          <li>When you hit: count each hit card.</li>
-          <li>When dealer reveals hole card: count it then.</li>
-          <li>When dealer draws: count each dealer draw.</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>7) Practice Routine (fast improvement)</h4>
-        <ul>
-          <li>Start in <b>Beginner</b> with RC/TC shown for 10 minutes.</li>
-          <li>Switch to <b>Intermediate</b>: hide RC, keep TC visible (optional) for 10 minutes.</li>
-          <li>Finish in <b>Advanced</b>: hide both, do count checks every hand for 10 minutes.</li>
-          <li>Use <b>Count Check</b> to verify your RC/TC. Use <b>Bet Check</b> to verify your ramp decision.</li>
-        </ul>
-      </div>
-
-      <div class="step">
-        <h4>8) Common Mistakes</h4>
-        <ul>
-          <li>Forgetting to count the dealer hole card when it flips.</li>
-          <li>Counting cards you didn’t actually see yet.</li>
-          <li>Not converting to true count (RC alone is misleading in multi-deck shoes).</li>
-          <li>Changing your count after a push/lose/win — outcomes don’t matter, only cards dealt.</li>
-        </ul>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
+          <button class="btn good" id="btnSubmitCount">Submit</button>
+          <span class="muted" id="countFeedback"></span>
+        </div>
       </div>
 
       <div class="callout">
-        In this trainer: turn off “Show running/true count” to simulate real play, and use Count Check to test yourself.
+        Tip: If you hide RC/TC in Settings, Count Check becomes your “answer key”.
       </div>
     </div>
   </div>
@@ -630,17 +634,14 @@
 
 <script>
 /* =========================================================
-   Card Counting Trainer — Single-file, no deps
-   - Hi-Lo running count
-   - True count (RC / decks remaining)
-   - 1–8 deck shoe w/ penetration + reshuffle
-   - Discard progress meter
-   - Blackjack engine (no split; double on first decision)
-   - Training: count checks + bet checks + stats
+   Flat-screen Blackjack Count Trainer (single file)
+   - Welcome screen -> Table screen
+   - No scrolling (viewport-locked)
+   - Popups: How-to, Settings, Count Check
+   - Auto-save bank/state via localStorage
 ========================================================= */
 
 const $ = (sel, el=document) => el.querySelector(sel);
-const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
 
 const SUITS = [
   {sym:"♠", color:"black"},
@@ -649,8 +650,7 @@ const SUITS = [
   {sym:"♣", color:"black"},
 ];
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-
-const STORAGE_KEY = "count_trainer_v2";
+const STORAGE_KEY = "counttrainer_flat_v1";
 
 function money(n){
   const sign = n < 0 ? "-" : "";
@@ -674,17 +674,10 @@ function shuffle(arr){
   }
   return arr;
 }
-function nowStamp(){
-  const d = new Date();
-  return d.toLocaleString();
-}
 function delay(ms){ return new Promise(res=>setTimeout(res, ms)); }
 
-/* -------------------------------
-   Hi-Lo Value
---------------------------------*/
+/* Hi-Lo value */
 function hiLoValue(rank){
-  // 2–6 +1, 7–9 0, 10–A -1
   if(rank === "A" || rank === "K" || rank === "Q" || rank === "J" || rank === "10") return -1;
   const n = Number(rank);
   if(n >= 2 && n <= 6) return +1;
@@ -692,112 +685,91 @@ function hiLoValue(rank){
   return 0;
 }
 
-/* -------------------------------
-   Blackjack hand value
---------------------------------*/
+/* Blackjack value */
 function bjCardValue(rank){
   if(rank === "A") return 11;
   if(["K","Q","J","10"].includes(rank)) return 10;
   return Number(rank);
 }
 function bjHandValue(cards){
-  let total = 0;
-  let aces = 0;
+  let total = 0, aces = 0;
   for(const c of cards){
     total += bjCardValue(c.rank);
     if(c.rank === "A") aces++;
   }
-  while(total > 21 && aces > 0){
-    total -= 10;
-    aces--;
-  }
+  while(total > 21 && aces > 0){ total -= 10; aces--; }
   return total;
 }
 function isBlackjack(cards){
   return cards.length === 2 && bjHandValue(cards) === 21;
 }
 
-/* -------------------------------
-   State
---------------------------------*/
+/* State */
 let state = {
+  // screens
+  started: false,
+
+  // trainer
   bank: 1000,
-  mode: "beginner",
-  decks: 6,
-  pen: 0.75,
-  speed: 420,
   showRC: true,
   showTC: true,
   autoHints: true,
 
-  // Shoe
+  // shoe settings
+  decks: 6,
+  pen: 0.75,
+  speed: 420,
+
+  // shoe
   shoe: [],
   dealt: 0,
   runningCount: 0,
 
-  // Hand
-  phase: "idle", // idle | player | dealer | done
+  // hand
+  phase: "idle", // idle|player|dealer|done
   player: [],
   dealer: [],
   holeHidden: true,
   canDouble: false,
-  handBet: 0,
-
-  // Trainer stats
-  checks: 0,
-  errors: 0,
-  betChecks: 0,
-  betErrors: 0,
-
-  // Log
-  log: []
+  handBet: 0
 };
 
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  toast("Saved.");
+function autoSave(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
 }
 function load(){
   const raw = localStorage.getItem(STORAGE_KEY);
-  if(raw){
-    try { state = JSON.parse(raw); }
-    catch(e){}
-  }
+  if(!raw) return;
+  try{
+    const obj = JSON.parse(raw);
+    if(obj && typeof obj === "object") state = {...state, ...obj};
+  }catch(e){}
 }
 function resetAll(){
-  localStorage.removeItem(STORAGE_KEY);
-  state = {
-    bank: 1000,
-    mode: "beginner",
-    decks: 6,
-    pen: 0.75,
-    speed: 420,
-    showRC: true,
-    showTC: true,
-    autoHints: true,
-    shoe: [],
-    dealt: 0,
-    runningCount: 0,
-    phase: "idle",
-    player: [],
-    dealer: [],
-    holeHidden: true,
-    canDouble: false,
-    handBet: 0,
-    checks: 0,
-    errors: 0,
-    betChecks: 0,
-    betErrors: 0,
-    log: []
-  };
+  state.started = false;
+  state.bank = 1000;
+  state.runningCount = 0;
+  state.dealt = 0;
+  state.player = [];
+  state.dealer = [];
+  state.phase = "idle";
+  state.holeHidden = true;
+  state.canDouble = false;
+  state.handBet = 0;
   buildNewShoe(true);
   renderAll();
-  toast("Reset.");
 }
 
-/* -------------------------------
-   Shoe logic
---------------------------------*/
+/* Shoe */
+function shoeSize(){ return state.decks * 52; }
+function cardsRemaining(){ return Math.max(0, shoeSize() - state.dealt); }
+function decksRemaining(){ return cardsRemaining() / 52; }
+function penetrationReached(){ return state.dealt >= Math.floor(state.pen * shoeSize()); }
+function trueCount(){
+  const dr = decksRemaining();
+  if(dr <= 0.25) return state.runningCount;
+  return state.runningCount / dr;
+}
 function buildNewShoe(silent=false){
   state.shoe = [];
   for(let d=0; d<state.decks; d++){
@@ -810,66 +782,19 @@ function buildNewShoe(silent=false){
   shuffle(state.shoe);
   state.dealt = 0;
   state.runningCount = 0;
-  if(!silent) logEntry(`🌀 New shoe shuffled (${state.decks} decks). RC reset to 0.`, 0);
-}
-function shoeSize(){ return state.decks * 52; }
-function cardsRemaining(){ return Math.max(0, shoeSize() - state.dealt); }
-function decksRemaining(){ return cardsRemaining() / 52; }
-function penetrationReached(){ return state.dealt >= Math.floor(state.pen * shoeSize()); }
-function trueCount(){
-  const dr = decksRemaining();
-  if(dr <= 0.25) return state.runningCount;
-  return state.runningCount / dr;
-}
-
-/* -------------------------------
-   UI / Logging
---------------------------------*/
-function toast(msg){
-  $("#lastResult").textContent = msg;
-  clearTimeout(toast._t);
-  toast._t = setTimeout(()=> $("#lastResult").textContent = "—", 2000);
-}
-function logEntry(html, delta){
-  const entry = { html, delta, at: nowStamp() };
-  state.log.unshift(entry);
-  if(state.log.length > 120) state.log.pop();
-  renderLog();
-}
-function renderLog(){
-  const el = $("#log");
-  el.innerHTML = "";
-  if(state.log.length === 0){
-    el.innerHTML = `<div class="small">No actions yet.</div>`;
-    return;
-  }
-  for(const e of state.log){
-    const cls = e.delta > 0 ? "good" : (e.delta < 0 ? "bad" : "warn");
-    const sign = e.delta > 0 ? "+" : "";
-    const deltaTxt = e.delta === 0 ? "" : ` <span class="status ${cls}">(${sign}${money(e.delta)})</span>`;
-    const div = document.createElement("div");
-    div.className = "entry";
-    div.innerHTML = `${e.html}${deltaTxt}<div class="meta">${e.at}</div>`;
-    el.appendChild(div);
+  if(!silent){
+    setMsg("New shoe shuffled. RC reset to 0.", "Press Deal to start.");
   }
 }
-
-/* -------------------------------
-   Card draw with counting
---------------------------------*/
 function drawOne(){
-  if(state.shoe.length === 0 || cardsRemaining() === 0){
-    buildNewShoe();
-  }
+  if(state.shoe.length === 0 || cardsRemaining() === 0) buildNewShoe();
   const c = state.shoe.pop();
   state.dealt++;
   state.runningCount += hiLoValue(c.rank);
   return c;
 }
 
-/* -------------------------------
-   Bet ramp suggestion
---------------------------------*/
+/* Bet suggestion */
 function suggestedUnits(tc){
   if(tc <= 0.5) return 1;
   if(tc <= 1.5) return 2;
@@ -878,16 +803,18 @@ function suggestedUnits(tc){
   return 12;
 }
 
-/* -------------------------------
-   Render cards
---------------------------------*/
+/* UI helpers */
+function setMsg(main, sub=""){
+  $("#msg").textContent = main;
+  $("#subMsg").textContent = sub;
+}
 function cardEl(c, hidden=false){
   const div = document.createElement("div");
   div.className = `card ${c.color}`;
   if(hidden){
     div.classList.add("hole");
     div.innerHTML = `<div class="corner">🂠</div><div class="suit">◆</div><div class="corner2">🂠</div>`;
-  } else {
+  }else{
     div.innerHTML = `
       <div class="corner">${c.rank}${c.suit}</div>
       <div style="text-align:center">
@@ -900,172 +827,126 @@ function cardEl(c, hidden=false){
   return div;
 }
 function renderHands(){
-  const d = $("#dealerCards");
-  const p = $("#playerCards");
-  d.innerHTML = "";
-  p.innerHTML = "";
+  const d = $("#dealerCards"), p = $("#playerCards");
+  d.innerHTML = ""; p.innerHTML = "";
 
   state.dealer.forEach((c,i)=>{
     const hide = state.holeHidden && i===1 && (state.phase==="player" || state.phase==="dealer");
     d.appendChild(cardEl(c, hide));
   });
-  state.player.forEach(c=> p.appendChild(cardEl(c,false)));
+  state.player.forEach(c => p.appendChild(cardEl(c,false)));
 
-  $("#dTotal").textContent = (state.holeHidden && (state.phase==="player"||state.phase==="dealer"))
-    ? "?"
-    : (state.dealer.length ? bjHandValue(state.dealer) : "—");
+  $("#dTotal").textContent =
+    (state.holeHidden && (state.phase==="player"||state.phase==="dealer"))
+      ? "?"
+      : (state.dealer.length ? bjHandValue(state.dealer) : "—");
   $("#pTotal").textContent = state.player.length ? bjHandValue(state.player) : "—";
 }
-
-/* -------------------------------
-   Main rendering
---------------------------------*/
-function applyModeVisibility(){
-  const mode = state.mode;
-  const showRC = state.showRC && (mode !== "advanced");
-  const showTC = state.showTC && (mode !== "advanced");
-
-  $("#rcTop").textContent = showRC ? String(state.runningCount) : "—";
-  $("#tcTop").textContent = showTC ? (trueCount().toFixed(1)) : "—";
-}
-
-function renderShoe(){
-  const total = shoeSize();
-  const dealt = state.dealt;
-  const remain = cardsRemaining();
-  const penPct = Math.min(1, dealt / total);
-  $("#dealt").textContent = String(dealt);
-  $("#decksLeft").textContent = decksRemaining().toFixed(1);
-
-  $("#penBar").style.width = (penPct * 100).toFixed(1) + "%";
-  $("#shoeInfo").textContent = penetrationReached()
-    ? "Penetration reached (shuffle soon)"
-    : `Pen ${(state.pen*100).toFixed(0)}% • ${remain} cards left`;
-
-  const perf = (state.checks===0) ? "—" : `${Math.max(0, Math.round(100*(1 - state.errors/Math.max(1,state.checks))))}% count`;
-  const perf2 = (state.betChecks===0) ? "—" : `${Math.max(0, Math.round(100*(1 - state.betErrors/Math.max(1,state.betChecks))))}% bets`;
-  $("#perfBadge").textContent = `${perf} • ${perf2}`;
-
-  $("#checks").textContent = String(state.checks);
-  $("#errors").textContent = String(state.errors);
-  $("#betChecks").textContent = String(state.betChecks);
-  $("#betErrors").textContent = String(state.betErrors);
-
+function renderTop(){
   $("#bank").textContent = money(state.bank);
-
-  applyModeVisibility();
+  $("#rcTop").textContent = state.showRC ? String(state.runningCount) : "—";
+  $("#tcTop").textContent = state.showTC ? trueCount().toFixed(1) : "—";
 }
-
-function renderSuggestedBet(){
+function renderFooter(){
   const unit = clampInt($("#unit").value, 1);
+  const chosenU = Number($("#betUnits").value);
+  $("#handBetLabel").textContent = money(chosenU * unit);
+
   const tc = trueCount();
   const su = suggestedUnits(tc);
-  const sug = `${su}u = ${money(su * unit)}`;
-  $("#suggestBet").textContent = state.autoHints ? sug : "—";
-  $("#unitLabel").textContent = money(unit);
+  $("#suggestBet").textContent = state.autoHints ? `${su}u = ${money(su*unit)}` : "—";
 
-  const chosenUnits = Number($("#betUnits").value);
-  $("#handBetLabel").textContent = money(chosenUnits * unit);
-  $("#toCall").textContent = money(chosenUnits * unit);
+  const remain = cardsRemaining();
+  $("#shoeInfo").textContent = penetrationReached()
+    ? `Cut reached • ${remain} left`
+    : `${remain} cards left`;
 }
-
 function setButtons(){
-  const inPlay = (state.phase === "player");
-  const dealerPlay = (state.phase === "dealer");
+  const inPlay = state.phase === "player";
+  const dealerPlay = state.phase === "dealer";
+  $("#btnDeal").disabled = inPlay || dealerPlay;
   $("#btnHit").disabled = !inPlay;
   $("#btnStand").disabled = !inPlay;
-  $("#btnFold").disabled = !inPlay;
   $("#btnDouble").disabled = !(inPlay && state.canDouble);
-  $("#btnDeal").disabled = (inPlay || dealerPlay);
 }
-
-function renderAll(){
-  $("#mode").value = state.mode;
-  $("#decks").value = String(state.decks);
-  $("#pen").value = String(state.pen);
-  $("#speed").value = String(state.speed);
+function showScreen(which){
+  const w = $("#screenWelcome"), t = $("#screenTable");
+  if(which === "welcome"){
+    w.style.display = "grid";
+    t.style.display = "none";
+  }else{
+    w.style.display = "none";
+    t.style.display = "grid";
+  }
+}
+function renderSettingsUI(){
   $("#showRC").checked = state.showRC;
   $("#showTC").checked = state.showTC;
   $("#autoHints").checked = state.autoHints;
+  $("#decks").value = String(state.decks);
+  $("#pen").value = String(state.pen);
+  $("#speed").value = String(state.speed);
+}
+function renderAll(){
+  // screen
+  showScreen(state.started ? "table" : "welcome");
 
-  renderShoe();
+  // UI
+  renderTop();
   renderHands();
-  renderSuggestedBet();
+  renderFooter();
   setButtons();
-  renderLog();
+  renderSettingsUI();
+
+  autoSave(); // ✅ persist everything continuously
 }
 
-/* -------------------------------
-   Training prompts + grading
---------------------------------*/
-function shouldPromptCountCheck(){
-  const freq = $("#checkFreq").value;
-  if(freq === "manual") return false;
-  if(freq === "everyHand") return true;
-  return Math.random() < 0.34;
+/* Modals */
+function openModal(id){
+  const el = $(id);
+  el.classList.add("show");
+  el.setAttribute("aria-hidden", "false");
+}
+function closeModal(id){
+  const el = $(id);
+  el.classList.remove("show");
+  el.setAttribute("aria-hidden", "true");
+}
+function wireModal(backdropId, closeBtnId){
+  const b = $(backdropId);
+  b.addEventListener("click", (e)=>{ if(e.target === b) closeModal(backdropId); });
+  $(closeBtnId).addEventListener("click", ()=> closeModal(backdropId));
 }
 
+/* Count check grading */
 function gradeCountSubmission(){
   const userRC = Math.trunc(Number($("#inpRC").value));
-  const userTC = Number($("#inpTC").value);
+  const tcRaw = $("#inpTC").value.trim();
+  const userTC = tcRaw === "" ? null : Number(tcRaw);
 
   const actualRC = state.runningCount;
   const actualTC = trueCount();
 
-  state.checks++;
-
   const rcOk = (userRC === actualRC);
-  const tcProvided = Number.isFinite(userTC) && $("#inpTC").value !== "";
-  const tcOk = !tcProvided ? true : (Math.abs(userTC - actualTC) <= 0.5);
+  const tcOk = (userTC === null) ? true : (Math.abs(userTC - actualTC) <= 0.5);
 
-  let msg = "";
   if(rcOk && tcOk){
-    msg = `✅ Correct. RC=${actualRC}, TC≈${actualTC.toFixed(1)}`;
+    $("#countFeedback").innerHTML = `✅ Correct. RC=${actualRC}, TC≈${actualTC.toFixed(1)}`;
   } else {
-    state.errors++;
-    msg = `❌ Off. Actual RC=${actualRC}, TC≈${actualTC.toFixed(1)}`;
+    $("#countFeedback").innerHTML = `❌ Off. Actual RC=${actualRC}, TC≈${actualTC.toFixed(1)}`;
   }
-  $("#countFeedback").innerHTML = msg;
-  toast(rcOk && tcOk ? "Count correct" : "Count incorrect");
-  renderShoe();
 }
 
-function gradeBetChoice(){
+/* Hand flow */
+async function dealHand(){
+  if(state.shoe.length === 0 || penetrationReached()) buildNewShoe();
+
   const unit = clampInt($("#unit").value, 1);
   const chosenU = Number($("#betUnits").value);
-  const tc = trueCount();
-  const sugU = suggestedUnits(tc);
-
-  state.betChecks++;
-  const ok = (chosenU === sugU);
-  if(!ok) state.betErrors++;
-
-  const chosen = money(chosenU * unit);
-  const sug = money(sugU * unit);
-
-  const msg = ok
-    ? `✅ Bet check: good (${chosenU}u). Suggested was ${sugU}u.`
-    : `❌ Bet check: you chose ${chosenU}u (${chosen}) — suggested ${sugU}u (${sug}).`;
-
-  logEntry(`🎯 ${msg}`, 0);
-  toast(ok ? "Bet OK" : "Bet off");
-  renderShoe();
-}
-
-/* -------------------------------
-   Hand Flow
---------------------------------*/
-async function dealHand(){
-  if(state.shoe.length === 0 || penetrationReached()){
-    buildNewShoe();
-  }
-
-  const unit = clampInt($("#unit").value, 1);
-  const chosenUnits = Number($("#betUnits").value);
-  const bet = chosenUnits * unit;
+  const bet = chosenU * unit;
 
   if(state.bank < bet){
-    toast("Trainer bank too low — add funds or lower bet.");
+    setMsg("Not enough bank for that bet.", "Lower bet units or reset bank in Settings.");
     return;
   }
 
@@ -1077,8 +958,9 @@ async function dealHand(){
   state.phase = "player";
   state.canDouble = true;
   $("#countFeedback").textContent = "";
+  const spd = clampInt(state.speed, 0);
 
-  const spd = clampInt($("#speed").value, 0);
+  setMsg("Dealing…", "");
 
   state.player.push(drawOne()); renderAll(); if(spd) await delay(spd);
   state.dealer.push(drawOne()); renderAll(); if(spd) await delay(spd);
@@ -1091,43 +973,32 @@ async function dealHand(){
   if(pBJ || dBJ){
     state.holeHidden = false;
     renderAll();
-    if(pBJ && dBJ){
-      finishHand("push", "Both Blackjack — push.", state.handBet);
-      return;
-    }
-    if(dBJ){
-      finishHand("lose", "Dealer Blackjack — you lose.", 0);
-      return;
-    }
-    const payout = Math.floor(state.handBet * 2.5);
-    finishHand("win", "Blackjack! You win 3:2.", payout);
-    return;
+    if(pBJ && dBJ) return finishHand("Push (both BJ).", state.handBet);
+    if(dBJ) return finishHand("Dealer Blackjack. You lose.", 0);
+    // 3:2 payout -> return 2.5x bet
+    return finishHand("Blackjack! You win 3:2.", Math.floor(state.handBet * 2.5));
   }
 
-  $("#msg").textContent = "Your move: Hit / Stand / Double / Fold.";
-  if(shouldPromptCountCheck()){
-    $("#msg").textContent += " (Count check suggested — press Count Check.)";
-  }
-
+  const freq = $("#checkFreq").value;
+  const prompt = (freq === "everyHand") || (freq === "random" && Math.random() < 0.34);
+  setMsg("Your move: Hit / Stand / Double.", prompt ? "Tip: do a Count Check this hand." : "");
   renderAll();
 }
 
 async function hit(){
   if(state.phase !== "player") return;
-  const spd = clampInt($("#speed").value, 0);
+  const spd = clampInt(state.speed, 0);
   state.player.push(drawOne());
   state.canDouble = false;
-  renderAll();
-  if(spd) await delay(spd);
+  renderAll(); if(spd) await delay(spd);
 
   const p = bjHandValue(state.player);
   if(p > 21){
     state.holeHidden = false;
     renderAll();
-    finishHand("lose", "BUST — you lose.", 0);
-    return;
+    return finishHand("BUST. You lose.", 0);
   }
-  $("#msg").textContent = "Hit or Stand.";
+  setMsg("Hit or Stand.", "");
   renderAll();
 }
 
@@ -1135,225 +1006,156 @@ async function stand(){
   if(state.phase !== "player") return;
   state.phase = "dealer";
   state.canDouble = false;
-  $("#msg").textContent = "Dealer plays…";
   state.holeHidden = false;
+  setMsg("Dealer plays…", "");
   renderAll();
 
-  const spd = clampInt($("#speed").value, 0);
-
+  const spd = clampInt(state.speed, 0);
   while(bjHandValue(state.dealer) < 17){
     state.dealer.push(drawOne());
-    renderAll();
-    if(spd) await delay(spd);
+    renderAll(); if(spd) await delay(spd);
   }
 
   const p = bjHandValue(state.player);
   const d = bjHandValue(state.dealer);
 
-  if(d > 21) return finishHand("win", "Dealer busts — you win.", state.handBet * 2);
-  if(p > d) return finishHand("win", "You beat the dealer.", state.handBet * 2);
-  if(p < d) return finishHand("lose", "Dealer wins.", 0);
-  return finishHand("push", "Push.", state.handBet);
+  if(d > 21) return finishHand("Dealer busts. You win.", state.handBet * 2);
+  if(p > d) return finishHand("You beat the dealer.", state.handBet * 2);
+  if(p < d) return finishHand("Dealer wins.", 0);
+  return finishHand("Push.", state.handBet);
 }
 
 async function doubleDown(){
   if(state.phase !== "player" || !state.canDouble) return;
-  const extra = state.handBet;
-  if(state.bank < extra){
-    toast("Not enough trainer bank to double.");
+
+  // double the bet
+  if(state.bank < state.handBet){
+    setMsg("Not enough bank to double.", "Lower bet units next hand.");
     return;
   }
-  state.bank -= extra;
-  state.handBet += extra;
+  state.bank -= state.handBet;
+  state.handBet *= 2;
   state.canDouble = false;
 
-  const spd = clampInt($("#speed").value, 0);
+  const spd = clampInt(state.speed, 0);
   state.player.push(drawOne());
-  renderAll();
-  if(spd) await delay(spd);
+  renderAll(); if(spd) await delay(spd);
 
   const p = bjHandValue(state.player);
   if(p > 21){
     state.holeHidden = false;
     renderAll();
-    finishHand("lose", "Double down… BUST.", 0);
-    return;
+    return finishHand("Double… BUST. You lose.", 0);
   }
   await stand();
 }
 
-function fold(){
-  if(state.phase !== "player") return;
-  state.holeHidden = false;
-  renderAll();
-  const returned = Math.floor(state.handBet * 0.5);
-  finishHand("lose", "You folded (trainer) — half bet returned.", returned);
-}
-
-function finishHand(outcome, message, payout){
+function finishHand(message, payout){
   state.bank += payout;
   state.phase = "done";
   state.canDouble = false;
 
   const net = payout - state.handBet;
   const cls = net > 0 ? "good" : net < 0 ? "bad" : "warn";
-
-  $("#msg").innerHTML = `${message} <span class="status ${cls}">${net>0?("+"+money(net)): net<0?("-"+money(-net)):"$0"}</span>`;
-  logEntry(`🂡 Hand ended: ${message} Bet ${money(state.handBet)}.`, net);
-
-  if(penetrationReached()){
-    logEntry(`✂️ Cut card reached. Next deal will shuffle.`, 0);
-    toast("Penetration reached");
-  }
-
-  renderAll();
-
+  setMsg(message + ` (${net>0?"+":"-"}${money(Math.abs(net))})`, `RC=${state.runningCount} • TC≈${trueCount().toFixed(1)}`);
+  // return to idle quickly
   setTimeout(()=>{
-    if(state.phase === "done"){
-      state.phase = "idle";
-      state.player = [];
-      state.dealer = [];
-      state.holeHidden = true;
-      state.handBet = 0;
-      $("#msg").textContent = "Press Deal for the next hand.";
-      renderAll();
-    }
+    state.phase = "idle";
+    state.player = [];
+    state.dealer = [];
+    state.holeHidden = true;
+    state.handBet = 0;
+    setMsg("Press Deal for the next hand.", penetrationReached() ? "Cut reached — next deal shuffles." : "");
+    renderAll();
   }, 650);
+
+  renderAll();
 }
 
-/* -------------------------------
-   Help modal behavior
---------------------------------*/
-function openHelp(){
-  const b = $("#helpBackdrop");
-  b.classList.add("show");
-  b.setAttribute("aria-hidden","false");
-}
-function closeHelp(){
-  const b = $("#helpBackdrop");
-  b.classList.remove("show");
-  b.setAttribute("aria-hidden","true");
-}
-$("#btnHow").addEventListener("click", openHelp);
-$("#btnCloseHelp").addEventListener("click", closeHelp);
-$("#helpBackdrop").addEventListener("click", (e)=>{
-  if(e.target === $("#helpBackdrop")) closeHelp();
-});
+/* Wiring */
+wireModal("#helpBackdrop", "#btnCloseHelp");
+wireModal("#settingsBackdrop", "#btnCloseSettings");
+wireModal("#countBackdrop", "#btnCloseCount");
+
+$("#btnHow").addEventListener("click", ()=> openModal("#helpBackdrop"));
+$("#btnSettings").addEventListener("click", ()=> openModal("#settingsBackdrop"));
+
 document.addEventListener("keydown", (e)=>{
-  if(e.key === "Escape") closeHelp();
-});
-
-/* -------------------------------
-   Wire UI
---------------------------------*/
-$("#btnSave").addEventListener("click", save);
-$("#btnReset").addEventListener("click", resetAll);
-
-$("#btnShuffle").addEventListener("click", ()=>{
-  buildNewShoe();
-  renderAll();
-  toast("Shuffled");
-});
-
-$("#btnClearStats").addEventListener("click", ()=>{
-  state.checks=0; state.errors=0; state.betChecks=0; state.betErrors=0;
-  logEntry("📊 Stats cleared.", 0);
-  renderAll();
-});
-
-$("#mode").addEventListener("change", (e)=>{
-  state.mode = e.target.value;
-  if(state.mode === "intermediate"){
-    state.showRC = false;
-  } else if(state.mode === "advanced"){
-    state.showRC = false;
-    state.showTC = false;
+  if(e.key === "Escape"){
+    closeModal("#helpBackdrop");
+    closeModal("#settingsBackdrop");
+    closeModal("#countBackdrop");
   }
+});
+
+$("#btnStart").addEventListener("click", ()=>{
+  state.started = true;
+  setMsg("Press Deal to start a shoe.", "");
   renderAll();
 });
 
-$("#decks").addEventListener("change", (e)=>{
-  state.decks = clampInt(e.target.value, 1);
-  buildNewShoe();
-  renderAll();
-});
-$("#pen").addEventListener("change", (e)=>{
-  state.pen = clampFloat(e.target.value, 0.1);
-  renderAll();
-});
-$("#speed").addEventListener("change", (e)=>{
-  state.speed = clampInt(e.target.value, 0);
-  renderAll();
-});
-$("#showRC").addEventListener("change", (e)=>{
-  state.showRC = e.target.checked;
-  renderAll();
-});
-$("#showTC").addEventListener("change", (e)=>{
-  state.showTC = e.target.checked;
-  renderAll();
-});
-$("#autoHints").addEventListener("change", (e)=>{
-  state.autoHints = e.target.checked;
-  renderAll();
-});
-
-$("#unit").addEventListener("input", ()=>{
-  renderSuggestedBet();
-  renderAll();
-});
-$("#betUnits").addEventListener("change", ()=>{
-  renderSuggestedBet();
-});
+$("#btnReset").addEventListener("click", resetAll);
 
 $("#btnDeal").addEventListener("click", dealHand);
 $("#btnHit").addEventListener("click", hit);
 $("#btnStand").addEventListener("click", stand);
 $("#btnDouble").addEventListener("click", doubleDown);
-$("#btnFold").addEventListener("click", fold);
 
 $("#btnCountCheck").addEventListener("click", ()=>{
-  $("#countFeedback").textContent = "Enter your guess, then Submit Count.";
-  toast("Count check");
+  $("#countFeedback").textContent = "";
+  $("#inpRC").value = "0";
+  $("#inpTC").value = "";
+  openModal("#countBackdrop");
 });
+
 $("#btnSubmitCount").addEventListener("click", gradeCountSubmission);
 
-$("#btnBetCheck").addEventListener("click", gradeBetChoice);
+$("#unit").addEventListener("input", ()=> renderAll());
+$("#betUnits").addEventListener("change", ()=> renderAll());
+$("#checkFreq").addEventListener("change", ()=> renderAll());
 
-/* -------------------------------
-   Hotkeys
---------------------------------*/
-document.addEventListener("keydown", (e)=>{
-  if(e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
-  const k = e.key.toLowerCase();
-  if(k === "d") $("#btnDeal").click();
-  if(k === "h") $("#btnHit").click();
-  if(k === "s") $("#btnStand").click();
-  if(k === "f") $("#btnFold").click();
-  if(k === "c") $("#btnCountCheck").click();
-  if(k === "b") $("#btnBetCheck").click();
-});
+/* Settings bindings */
+$("#showRC").addEventListener("change", (e)=>{ state.showRC = e.target.checked; renderAll(); });
+$("#showTC").addEventListener("change", (e)=>{ state.showTC = e.target.checked; renderAll(); });
+$("#autoHints").addEventListener("change", (e)=>{ state.autoHints = e.target.checked; renderAll(); });
 
-/* -------------------------------
-   Init
---------------------------------*/
-load();
-state.mode = state.mode || "beginner";
-state.decks = clampInt(state.decks, 1) || 6;
-state.pen = clampFloat(state.pen, 0.1) || 0.75;
-state.speed = clampInt(state.speed, 0) ?? 420;
-
-if(!Array.isArray(state.shoe) || state.shoe.length === 0){
+$("#decks").addEventListener("change", (e)=>{
+  state.decks = clampInt(e.target.value, 1);
   buildNewShoe(true);
+  setMsg("Shoe updated. RC reset.", "Press Deal to start.");
+  renderAll();
+});
+$("#pen").addEventListener("change", (e)=>{ state.pen = clampFloat(e.target.value, 0.1); renderAll(); });
+$("#speed").addEventListener("change", (e)=>{ state.speed = clampInt(e.target.value, 0); renderAll(); });
+
+$("#btnShuffle").addEventListener("click", ()=>{
+  buildNewShoe();
+  renderAll();
+});
+$("#btnWipe").addEventListener("click", resetAll);
+
+/* Save on background/close */
+window.addEventListener("beforeunload", autoSave);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden") autoSave(); });
+
+/* Service worker (offline) */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
+
+/* Init */
+load();
+if(!Array.isArray(state.shoe) || state.shoe.length === 0) buildNewShoe(true);
+
+// If you reopen mid-hand, reset to idle (prevents weird stuck state)
+if(state.phase && state.phase !== "idle"){
+  state.phase = "idle";
+  state.player = [];
+  state.dealer = [];
+  state.holeHidden = true;
+  state.canDouble = false;
+  state.handBet = 0;
 }
-if(state.mode === "advanced"){
-  state.showRC = false;
-  state.showTC = false;
-}
+
 renderAll();
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js");
-  }
 </script>
 </body>
 </html>
